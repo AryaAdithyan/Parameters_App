@@ -1,6 +1,6 @@
 import requests
 import torch
-from torch import nn
+import torch.nn as nn
 from torchvision import transforms, models
 from PIL import Image
 import pandas as pd
@@ -8,22 +8,16 @@ import numpy as np
 import os
 import streamlit as st
 
-# Google Drive file ID and model path
-MODEL_URL = "https://drive.google.com/uc?id=1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"
-MODEL_PATH = "best_model_parameters.pth"
+# Download the model from Google Drive
+def download_file_from_google_drive(file_id, destination):
+    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
+    response = requests.get(URL, stream=True)
+    with open(destination, "wb") as file:
+        for chunk in response.iter_content(chunk_size=32768):
+            if chunk:
+                file.write(chunk)
 
-# Function to download model file
-def download_model(url, path):
-    response = requests.get(url, stream=True)
-    with open(path, "wb") as file:
-        for chunk in response.iter_content(chunk_size=8192):
-            file.write(chunk)
-
-# Download model if not already present
-if not os.path.isfile(MODEL_PATH):
-    download_model(MODEL_URL, MODEL_PATH)
-
-# Define the model
+# Load the trained model
 class RetinalModel(nn.Module):
     def __init__(self, num_parameters):
         super(RetinalModel, self).__init__()
@@ -35,11 +29,11 @@ class RetinalModel(nn.Module):
 
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
-    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load(model_path))
     model.eval()
     return model
 
-# Healthy ranges dictionary
+# Healthy ranges dictionary for gender-specific ranges
 healthy_ranges = {
     'Total Cholesterol': (125, 200),
     'LDL': (0, 100),
@@ -104,8 +98,14 @@ def main():
             left_image = transform(left_image).unsqueeze(0)
             right_image = transform(right_image).unsqueeze(0)
 
+            # Download model if not exists
+            model_path = 'best_model.pth'
+            if not os.path.exists(model_path):
+                file_id = '1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM'  # Your Google Drive file ID
+                download_file_from_google_drive(file_id, model_path)
+
             # Load model and make predictions
-            model = load_model(MODEL_PATH, num_parameters=22)  # Replace 22 with the actual number of parameters
+            model = load_model(model_path, num_parameters=21)  # Replace 21 with the actual number of parameters
 
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             model.to(device)
