@@ -5,5 +5,4 @@ Pillow
 torch
 torchvision
 requests
-os
 gdown
