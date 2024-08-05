@@ -11,7 +11,7 @@ import gdown
 
 # Constants
 MODEL_URL = "https://drive.google.com/uc?id=1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"  # Google Drive file ID
-MODEL_PATH = "best_model.pth"
+MODEL_PATH = "best_model_parameters.pth"
 
 # Define the model architecture
 class RetinalModel(nn.Module):
