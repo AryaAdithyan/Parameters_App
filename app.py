@@ -9,7 +9,7 @@ from torchvision import models
 import requests
 from io import BytesIO
 
-# Define the model class as it was in the training script
+# Define the model class
 class RetinalModel(nn.Module):
     def __init__(self, num_parameters):
         super(RetinalModel, self).__init__()
@@ -21,8 +21,7 @@ class RetinalModel(nn.Module):
 
 # Function to download the model from Google Drive
 def download_model(model_url):
-    # Convert the Google Drive URL to a direct download link
-    file_id = model_url.split('/')[-2]
+    file_id = '1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM'
     direct_link = f"https://drive.google.com/uc?id={file_id}"
 
     response = requests.get(direct_link)
@@ -54,55 +53,13 @@ transform = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# Define the healthy ranges for men and women
+# Define the healthy ranges
 healthy_ranges = {
     'Male': {
-        'Total Cholesterol': (125, 200),
-        'LDL': (0, 100),
-        'HDL': (40, 100),
-        'Triglycerides': (0, 150),
-        'Mean Arterial Blood Pressure': (70, 105),
-        'eGFR': (90, 150),
-        'Albumin': (3.5, 5.0),
-        'Fasting Glucose Level': (70, 99),
-        'Normal HbA1c': (0, 5.7),
-        'Postprandial Glucose Level': (0, 140),
-        'Sodium': (135, 145),
-        'Potassium': (3.5, 5.0),
-        'Red Blood Cells Count': (4.7, 6.1),
-        'White Blood Cells Count': (4500, 11000),
-        'Packed Cell Volume': (40.7, 50.3),
-        'Magnesium': (1.7, 2.2),
-        'Uric Acid': (3.5, 7.2),
-        'C-Reactive Protein (CRP)': (0.1, 1.0),
-        'Body Mass Index (BMI)': (18.5, 24.9),
-        'Vitamin D': (20, 50),
-        'Systolic Blood Pressure': (90, 120),
-        'Diastolic Blood Pressure': (60, 80)
+        # Add ranges here
     },
     'Female': {
-        'Total Cholesterol': (125, 200),
-        'LDL': (0, 100),
-        'HDL': (50, 100),
-        'Triglycerides': (0, 150),
-        'Mean Arterial Blood Pressure': (70, 105),
-        'eGFR': (90, 150),
-        'Albumin': (3.5, 5.0),
-        'Fasting Glucose Level': (70, 99),
-        'Normal HbA1c': (0, 5.7),
-        'Postprandial Glucose Level': (0, 140),
-        'Sodium': (135, 145),
-        'Potassium': (3.5, 5.0),
-        'Red Blood Cells Count': (4.2, 5.4),
-        'White Blood Cells Count': (4500, 11000),
-        'Packed Cell Volume': (36.1, 44.3),
-        'Magnesium': (1.7, 2.2),
-        'Uric Acid': (2.6, 6.0),
-        'C-Reactive Protein (CRP)': (0.1, 1.0),
-        'Body Mass Index (BMI)': (18.5, 24.9),
-        'Vitamin D': (20, 50),
-        'Systolic Blood Pressure': (90, 120),
-        'Diastolic Blood Pressure': (60, 80)
+        # Add ranges here
     }
 }
 
@@ -127,7 +84,6 @@ def predict_parameters(image_path_left, image_path_right, model, gender):
     predictions_left = outputs_left.squeeze().numpy()
     predictions_right = outputs_right.squeeze().numpy()
 
-    # Average predictions from both images
     average_predictions = (predictions_left + predictions_right) / 2
     clipped_predictions = clip_predictions(average_predictions, gender, healthy_ranges)
 
@@ -151,16 +107,12 @@ def main():
             model = load_model(model_url, num_parameters=22)
             
             if model:
-                # Predict parameters
                 predictions = predict_parameters(image_file_left, image_file_right, model, gender)
-
-                # Prepare the results
                 result_df = pd.DataFrame([predictions], columns=list(healthy_ranges[gender].keys()))
                 result_df.insert(0, 'Name', name)
                 result_df.insert(1, 'Age', age)
                 result_df.insert(2, 'Gender', gender)
 
-                # Save the results to a CSV file
                 result_csv = result_df.to_csv(index=False)
                 st.download_button(
                     label="Download Results",
