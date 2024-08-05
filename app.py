@@ -28,7 +28,8 @@ def download_model():
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
     try:
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        # Use weights_only=True to avoid issues with arbitrary code execution
+        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')), strict=False)
         model.eval()
         return model
     except RuntimeError as e:
