@@ -11,7 +11,7 @@ import gdown
 
 # Constants
 MODEL_URL = "https://drive.google.com/uc?id=1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"  # Google Drive file ID
-MODEL_PATH = "best_model_parameters.pth"
+MODEL_PATH = "best_model.pth"
 
 # Define the model architecture
 class RetinalModel(nn.Module):
@@ -34,7 +34,7 @@ def download_model(url, path):
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
     try:
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')), weights_only=True)
         model.eval()
         return model
     except RuntimeError as e:
@@ -43,6 +43,7 @@ def load_model(model_path, num_parameters):
     except Exception as e:
         st.error(f"Failed to load the model: {e}")
         raise
+
 
 # Define healthy ranges
 healthy_ranges = {
