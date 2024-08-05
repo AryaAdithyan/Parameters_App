@@ -28,7 +28,6 @@ def download_model():
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
     try:
-        # Use weights_only=True to avoid issues with arbitrary code execution
         model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')), strict=False)
         model.eval()
         return model
@@ -86,11 +85,16 @@ def main():
         st.error("Failed to load model.")
         return
     
+    # User input
+    name = st.text_input("Enter Patient Name")
+    age = st.number_input("Enter Patient Age", min_value=0)
+    gender = st.selectbox("Select Gender", ["Male", "Female"])
+    
     # Upload images
     uploaded_left_image = st.file_uploader("Upload Left Retinal Image", type=["jpg", "jpeg", "png"])
     uploaded_right_image = st.file_uploader("Upload Right Retinal Image", type=["jpg", "jpeg", "png"])
     
-    if uploaded_left_image and uploaded_right_image:
+    if uploaded_left_image and uploaded_right_image and name and age and gender:
         # Process images
         left_image = Image.open(uploaded_left_image).convert("RGB")
         right_image = Image.open(uploaded_right_image).convert("RGB")
@@ -115,6 +119,9 @@ def main():
         
         # Output results
         result_df = pd.DataFrame([averaged_prediction], columns=list(healthy_ranges.keys()))
+        result_df.insert(0, "Name", [name])
+        result_df.insert(1, "Age", [age])
+        result_df.insert(2, "Gender", [gender])
         result_df.to_csv('predicted_parameters.csv', index=False)
         
         st.write("Predicted Parameters:")
