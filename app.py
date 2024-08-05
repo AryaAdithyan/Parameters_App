@@ -8,7 +8,8 @@ import numpy as np
 import os
 import streamlit as st
 
-MODEL_URL = "https://drive.google.com/file/d/1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"  # Replace with your model link
+# Google Drive file ID and model path
+MODEL_URL = "https://drive.google.com/uc?id=1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"
 MODEL_PATH = "best_model_parameters.pth"
 
 # Function to download model file
@@ -22,7 +23,7 @@ def download_model(url, path):
 if not os.path.isfile(MODEL_PATH):
     download_model(MODEL_URL, MODEL_PATH)
 
-# Load the trained model
+# Define the model
 class RetinalModel(nn.Module):
     def __init__(self, num_parameters):
         super(RetinalModel, self).__init__()
@@ -34,11 +35,11 @@ class RetinalModel(nn.Module):
 
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.eval()
     return model
 
-# Healthy ranges dictionary for gender-specific ranges
+# Healthy ranges dictionary
 healthy_ranges = {
     'Total Cholesterol': (125, 200),
     'LDL': (0, 100),
@@ -103,14 +104,8 @@ def main():
             left_image = transform(left_image).unsqueeze(0)
             right_image = transform(right_image).unsqueeze(0)
 
-            # Download model if not exists
-            model_path = 'best_model.pth'
-            if not os.path.exists(model_path):
-                file_id = '1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM'  # Your Google Drive file ID
-                download_file_from_google_drive(file_id, model_path)
-
             # Load model and make predictions
-            model = load_model(model_path, num_parameters=22)  # Replace 21 with the actual number of parameters
+            model = load_model(MODEL_PATH, num_parameters=22)  # Replace 22 with the actual number of parameters
 
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             model.to(device)
