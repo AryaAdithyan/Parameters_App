@@ -7,12 +7,22 @@ import pandas as pd
 import numpy as np
 import os
 import streamlit as st
-import gdown  # Ensure gdown is installed for downloading files from Google Drive
+import gdown
 
+# Constants
 MODEL_URL = "https://drive.google.com/uc?id=1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"  # Google Drive file ID
 MODEL_PATH = "best_model_parameters.pth"
 
-# Function to download model file from Google Drive
+# Define the model architecture
+class RetinalModel(nn.Module):
+    def __init__(self, num_parameters):
+        super(RetinalModel, self).__init__()
+        self.resnet = models.resnet50(weights='DEFAULT')
+        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_parameters)
+    
+    def forward(self, x):
+        return self.resnet(x)
+
 def download_model(url, path):
     try:
         gdown.download(url, path, quiet=False)
@@ -20,16 +30,6 @@ def download_model(url, path):
     except Exception as e:
         st.error(f"Error downloading model: {e}")
         raise
-
-# Load the trained model
-class RetinalModel(nn.Module):
-    def __init__(self, num_parameters):
-        super(RetinalModel, self).__init__()
-        self.resnet = models.resnet50(weights='DEFAULT')  # Update for new torchvision versions
-        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_parameters)
-    
-    def forward(self, x):
-        return self.resnet(x)
 
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
@@ -44,7 +44,7 @@ def load_model(model_path, num_parameters):
         st.error(f"Failed to load the model: {e}")
         raise
 
-# Healthy ranges dictionary for gender-specific ranges
+# Define healthy ranges
 healthy_ranges = {
     'Total Cholesterol': (125, 200),
     'LDL': (0, 100),
@@ -77,7 +77,6 @@ transform = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# Function to clip predictions
 def clip_predictions(predictions, ranges, gender):
     clipped_predictions = []
     for i, param in enumerate(predictions):
@@ -89,7 +88,6 @@ def clip_predictions(predictions, ranges, gender):
         clipped_predictions.append(np.clip(param, range_for_gender[0], range_for_gender[1]))
     return clipped_predictions
 
-# Streamlit app
 def main():
     st.title("Retinal Image Parameter Prediction")
 
@@ -102,14 +100,12 @@ def main():
 
     if st.button("Predict"):
         if left_image and right_image and name and age and gender:
-            # Load and preprocess images
             left_image = Image.open(left_image).convert('RGB')
             right_image = Image.open(right_image).convert('RGB')
 
             left_image = transform(left_image).unsqueeze(0)
             right_image = transform(right_image).unsqueeze(0)
 
-            # Download model if not exists
             if not os.path.isfile(MODEL_PATH):
                 try:
                     download_model(MODEL_URL, MODEL_PATH)
@@ -117,7 +113,6 @@ def main():
                     st.error(f"Failed to download the model: {e}")
                     return
 
-            # Load model and make predictions
             model = load_model(MODEL_PATH, num_parameters=22)  # Adjust num_parameters as needed
 
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -131,11 +126,9 @@ def main():
                     left_pred = model(left_image).cpu().numpy()[0]
                     right_pred = model(right_image).cpu().numpy()[0]
 
-                # Average the predictions
                 avg_predictions = (left_pred + right_pred) / 2
                 avg_predictions = clip_predictions(avg_predictions, healthy_ranges, gender)
 
-                # Prepare output
                 results = {
                     "Name": [name],
                     "Age": [age],
