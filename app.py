@@ -1,10 +1,21 @@
-import streamlit as st
+import requests
+import torch
+import torch.nn as nn
+from torchvision import transforms, models
+from PIL import Image
 import pandas as pd
 import numpy as np
-import torch
-from PIL import Image
-from torchvision import transforms, models
 import os
+import streamlit as st
+
+# Download the model from Google Drive
+def download_file_from_google_drive(file_id, destination):
+    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
+    response = requests.get(URL, stream=True)
+    with open(destination, "wb") as file:
+        for chunk in response.iter_content(chunk_size=32768):
+            if chunk:
+                file.write(chunk)
 
 # Load the trained model
 class RetinalModel(nn.Module):
@@ -87,9 +98,14 @@ def main():
             left_image = transform(left_image).unsqueeze(0)
             right_image = transform(right_image).unsqueeze(0)
 
+            # Download model if not exists
+            model_path = 'best_model.pth'
+            if not os.path.exists(model_path):
+                file_id = '1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM'  # Your Google Drive file ID
+                download_file_from_google_drive(file_id, model_path)
+
             # Load model and make predictions
-            model_path = 'path/to/your/github/repository/best_model.pth'  # Replace with actual path
-            model = load_model(model_path, num_parameters=21)  # Replace 21 with the actual number of parameters
+            model = load_model(model_path, num_parameters=22)  # Replace 21 with the actual number of parameters
 
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             model.to(device)
