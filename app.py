@@ -7,21 +7,25 @@ import pandas as pd
 import numpy as np
 import os
 import streamlit as st
+import gdown  # Ensure gdown is installed for downloading files from Google Drive
 
-# Download the model from Google Drive
-def download_file_from_google_drive(file_id, destination):
-    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
-    response = requests.get(URL, stream=True)
-    with open(destination, "wb") as file:
-        for chunk in response.iter_content(chunk_size=32768):
-            if chunk:
-                file.write(chunk)
+MODEL_URL = "https://drive.google.com/uc?id=1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"  # Google Drive file ID
+MODEL_PATH = "best_model_parameters.pth"
+
+# Function to download model file from Google Drive
+def download_model(url, path):
+    try:
+        gdown.download(url, path, quiet=False)
+        st.success("Model downloaded successfully.")
+    except Exception as e:
+        st.error(f"Error downloading model: {e}")
+        raise
 
 # Load the trained model
 class RetinalModel(nn.Module):
     def __init__(self, num_parameters):
         super(RetinalModel, self).__init__()
-        self.resnet = models.resnet50(pretrained=True)
+        self.resnet = models.resnet50(weights='DEFAULT')  # Update for new torchvision versions
         self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_parameters)
     
     def forward(self, x):
@@ -29,9 +33,16 @@ class RetinalModel(nn.Module):
 
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
-    model.load_state_dict(torch.load(model_path))
-    model.eval()
-    return model
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+        model.eval()
+        return model
+    except RuntimeError as e:
+        st.error(f"Runtime error while loading the model: {e}")
+        raise
+    except Exception as e:
+        st.error(f"Failed to load the model: {e}")
+        raise
 
 # Healthy ranges dictionary for gender-specific ranges
 healthy_ranges = {
@@ -99,13 +110,15 @@ def main():
             right_image = transform(right_image).unsqueeze(0)
 
             # Download model if not exists
-            model_path = 'best_model.pth'
-            if not os.path.exists(model_path):
-                file_id = '1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM'  # Your Google Drive file ID
-                download_file_from_google_drive(file_id, model_path)
+            if not os.path.isfile(MODEL_PATH):
+                try:
+                    download_model(MODEL_URL, MODEL_PATH)
+                except Exception as e:
+                    st.error(f"Failed to download the model: {e}")
+                    return
 
             # Load model and make predictions
-            model = load_model(model_path, num_parameters=21)  # Replace 21 with the actual number of parameters
+            model = load_model(MODEL_PATH, num_parameters=22)  # Adjust num_parameters as needed
 
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             model.to(device)
@@ -113,28 +126,31 @@ def main():
             left_image = left_image.to(device)
             right_image = right_image.to(device)
 
-            with torch.no_grad():
-                left_pred = model(left_image).cpu().numpy()[0]
-                right_pred = model(right_image).cpu().numpy()[0]
+            try:
+                with torch.no_grad():
+                    left_pred = model(left_image).cpu().numpy()[0]
+                    right_pred = model(right_image).cpu().numpy()[0]
 
-            # Average the predictions
-            avg_predictions = (left_pred + right_pred) / 2
-            avg_predictions = clip_predictions(avg_predictions, healthy_ranges, gender)
+                # Average the predictions
+                avg_predictions = (left_pred + right_pred) / 2
+                avg_predictions = clip_predictions(avg_predictions, healthy_ranges, gender)
 
-            # Prepare output
-            results = {
-                "Name": [name],
-                "Age": [age],
-                "Gender": [gender]
-            }
-            results.update({param: [value] for param, value in zip(healthy_ranges.keys(), avg_predictions)})
+                # Prepare output
+                results = {
+                    "Name": [name],
+                    "Age": [age],
+                    "Gender": [gender]
+                }
+                results.update({param: [value] for param, value in zip(healthy_ranges.keys(), avg_predictions)})
 
-            df = pd.DataFrame(results)
-            output_csv = 'predictions.csv'
-            df.to_csv(output_csv, index=False)
+                df = pd.DataFrame(results)
+                output_csv = 'predictions.csv'
+                df.to_csv(output_csv, index=False)
 
-            st.write("Predictions saved to:", output_csv)
-            st.download_button(label="Download CSV", data=df.to_csv(index=False), file_name="predictions.csv", mime="text/csv")
+                st.write("Predictions saved to:", output_csv)
+                st.download_button(label="Download CSV", data=df.to_csv(index=False), file_name="predictions.csv", mime="text/csv")
+            except Exception as e:
+                st.error(f"Error making predictions: {e}")
         else:
             st.error("Please upload both images and fill out all fields")
 
