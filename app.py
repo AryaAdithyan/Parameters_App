@@ -34,15 +34,12 @@ def download_model(url, path):
 def load_model(model_path, num_parameters):
     model = RetinalModel(num_parameters)
     try:
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')), weights_only=True)
+        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         model.eval()
         return model
     except RuntimeError as e:
-        st.error(f"Runtime error while loading the model: {e}")
-        raise
-    except Exception as e:
-        st.error(f"Failed to load the model: {e}")
-        raise
+        print(f"Error loading model state dict: {e}")
+        return None
 
 
 # Define healthy ranges
