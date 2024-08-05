@@ -8,14 +8,19 @@ import numpy as np
 import os
 import streamlit as st
 
-# Download the model from Google Drive
-def download_file_from_google_drive(file_id, destination):
-    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
-    response = requests.get(URL, stream=True)
-    with open(destination, "wb") as file:
-        for chunk in response.iter_content(chunk_size=32768):
-            if chunk:
-                file.write(chunk)
+MODEL_URL = "https://drive.google.com/file/d/1nbJUE_P74egDQLfTb4qIdY6AtyqkTadM"  # Replace with your model link
+MODEL_PATH = "best_model_parameters.pth"
+
+# Function to download model file
+def download_model(url, path):
+    response = requests.get(url, stream=True)
+    with open(path, "wb") as file:
+        for chunk in response.iter_content(chunk_size=8192):
+            file.write(chunk)
+
+# Download model if not already present
+if not os.path.isfile(MODEL_PATH):
+    download_model(MODEL_URL, MODEL_PATH)
 
 # Load the trained model
 class RetinalModel(nn.Module):
