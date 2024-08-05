@@ -75,7 +75,7 @@ healthy_ranges = {
 }
 
 def main():
-    st.title("Retinal Image Parameter Prediction")
+    st.title("Parameters Prediction Using Retinal Image")
 
     # Download and load the model
     download_model()
@@ -93,46 +93,50 @@ def main():
     # Upload images
     uploaded_left_image = st.file_uploader("Upload Left Retinal Image", type=["jpg", "jpeg", "png"])
     uploaded_right_image = st.file_uploader("Upload Right Retinal Image", type=["jpg", "jpeg", "png"])
-    
-    if uploaded_left_image and uploaded_right_image and name and age and gender:
-        # Process images
-        left_image = Image.open(uploaded_left_image).convert("RGB")
-        right_image = Image.open(uploaded_right_image).convert("RGB")
-        
-        left_image_tensor = preprocess_image(left_image)
-        right_image_tensor = preprocess_image(right_image)
-        
-        # Predict
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        model.to(device)
-        
-        left_image_tensor = left_image_tensor.to(device)
-        right_image_tensor = right_image_tensor.to(device)
-        
-        with torch.no_grad():
-            left_prediction = model(left_image_tensor).cpu().numpy().flatten()
-            right_prediction = model(right_image_tensor).cpu().numpy().flatten()
-        
-        # Average predictions
-        average_prediction = (left_prediction + right_prediction) / 2
-        averaged_prediction = clip_predictions(average_prediction, healthy_ranges)
-        
-        # Output results
-        result_df = pd.DataFrame([averaged_prediction], columns=list(healthy_ranges.keys()))
-        result_df.insert(0, "Name", [name])
-        result_df.insert(1, "Age", [age])
-        result_df.insert(2, "Gender", [gender])
-        result_df.to_csv('predicted_parameters.csv', index=False)
-        
-        st.write("Predicted Parameters:")
-        st.dataframe(result_df)
-        
-        st.download_button(
-            label="Download CSV",
-            data=result_df.to_csv(index=False).encode('utf-8'),
-            file_name='predicted_parameters.csv',
-            mime='text/csv'
-        )
+
+    # Predict button
+    if st.button("Predict"):
+        if uploaded_left_image and uploaded_right_image and name and age and gender:
+            # Process images
+            left_image = Image.open(uploaded_left_image).convert("RGB")
+            right_image = Image.open(uploaded_right_image).convert("RGB")
+            
+            left_image_tensor = preprocess_image(left_image)
+            right_image_tensor = preprocess_image(right_image)
+            
+            # Predict
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            model.to(device)
+            
+            left_image_tensor = left_image_tensor.to(device)
+            right_image_tensor = right_image_tensor.to(device)
+            
+            with torch.no_grad():
+                left_prediction = model(left_image_tensor).cpu().numpy().flatten()
+                right_prediction = model(right_image_tensor).cpu().numpy().flatten()
+            
+            # Average predictions
+            average_prediction = (left_prediction + right_prediction) / 2
+            averaged_prediction = clip_predictions(average_prediction, healthy_ranges)
+            
+            # Output results
+            result_df = pd.DataFrame([averaged_prediction], columns=list(healthy_ranges.keys()))
+            result_df.insert(0, "Name", [name])
+            result_df.insert(1, "Age", [age])
+            result_df.insert(2, "Gender", [gender])
+            result_df.to_csv('predicted_parameters.csv', index=False)
+            
+            st.write("Predicted Parameters:")
+            st.dataframe(result_df)
+            
+            st.download_button(
+                label="Download CSV",
+                data=result_df.to_csv(index=False).encode('utf-8'),
+                file_name='predicted_parameters.csv',
+                mime='text/csv'
+            )
+        else:
+            st.error("Please upload both images and fill out all fields.")
 
 if __name__ == "__main__":
     main()
